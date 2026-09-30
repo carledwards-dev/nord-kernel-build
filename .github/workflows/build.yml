@@ -31,4 +31,4 @@ jobs:
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
           
           make O=out vendor/holi-qgki_defconfig
-          make O=out -j$(nproc) KCFLAGS="-Wno-error"
+          make O=out -j$(nproc) KCFLAGS="-w -Wno-error=format -Wno-error=implicit-fallthrough" KBUILD_CFLAGS="-w"
