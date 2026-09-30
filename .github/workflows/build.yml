@@ -11,9 +11,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf imagemagick liblz4-tool libncurses5-dev libssl-dev libxml2 libxml2-utils lzop rsync schedtool squashfs-tools xsltproc zip zlib1g-dev gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
-      - name: Download Proton Clang
-        run: git clone https://github.com/kdrag0n/proton-clang.git --depth=1 ~/proton-clang
-
       - name: Download LineageOS Kernel
         run: git clone https://github.com/LineageOS/android_kernel_oneplus_sm6375.git -b lineage-23.2 --depth=1 ~/kernel
 
@@ -27,13 +24,23 @@ jobs:
           cd ~/kernel
           sed -i 's/asm ("");/ /g' include/linux/compiler-gcc.h
           
+      - name: Download Proton Clang
+        run: git clone https://github.com/kdrag0n/proton-clang.git --depth=1 ~/proton-clang
+
       - name: Compile the Kernel
         run: |
           cd ~/kernel
           export ARCH=arm64
           export SUBARCH=arm64
+          export PATH="$HOME/proton-clang/bin:$PATH"
+          export CC=clang
           export CROSS_COMPILE=aarch64-linux-gnu-
           export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
+          export AR=llvm-ar
+          export NM=llvm-nm
+          export OBJCOPY=llvm-objcopy
+          export OBJDUMP=llvm-objdump
+          export STRIP=llvm-strip
           
           make O=out vendor/holi-qgki_defconfig
-          make O=out -j$(nproc) KCFLAGS="-w -Wno-error=format -Wno-error=implicit-fallthrough" KBUILD_CFLAGS="-w"
+          make O=out -j$(nproc) CC=clang KCFLAGS="-w -Wno-error=format -Wno-error=implicit-fallthrough" KBUILD_CFLAGS="-w"
