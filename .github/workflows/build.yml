@@ -22,6 +22,11 @@ jobs:
           cd ~/kernel/drivers/staging/qcacld-3.0
           find . -type f \( -name "Kbuild" -o -name "Makefile" -o -name "*.mk" -o -name "*defconfig" \) -exec sed -i 's/CONFIG_FEATURE_MONITOR_MODE_SUPPORT := n/CONFIG_FEATURE_MONITOR_MODE_SUPPORT := y/g' {} +
 
+      - name: Fix GCC Asm Goto Bug
+        run: |
+          cd ~/kernel
+          sed -i 's/asm ("");/ /g' include/linux/compiler-gcc.h
+          
       - name: Compile the Kernel
         run: |
           cd ~/kernel
