@@ -36,7 +36,11 @@ jobs:
           export OBJCOPY=llvm-objcopy
           export OBJDUMP=llvm-objdump
           export STRIP=llvm-strip
-          make O=out vendor/larry_defconfig
+          
+          echo "Available vendor configs:"
+          ls arch/arm64/configs/vendor/
+          
+          make O=out vendor/holi_defconfig
           make O=out -j$(nproc)
 
       - name: Upload Finished Kernel
