@@ -9,38 +9,54 @@ jobs:
       - name: Install Build Tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf imagemagick liblz4-tool libncurses5-dev libssl-dev libxml2 libxml2-utils lzop rsync schedtool squashfs-tools xsltproc zip zlib1g-dev gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
+          sudo apt-get install -y bc bison build-essential ccache curl flex git gnupg gperf \
+            liblz4-tool libncurses5-dev libssl-dev libxml2 libxml2-utils lzop rsync \
+            squashfs-tools xsltproc zip zlib1g-dev lld python3 \
+            gcc-aarch64-linux-gnu gcc-arm-linux-gnueabi
 
       - name: Download LineageOS Kernel
         run: git clone https://github.com/LineageOS/android_kernel_oneplus_sm6375.git -b lineage-23.2 --depth=1 ~/kernel
 
       - name: Apply Monitor Mode Patch
         run: |
-          cd ~/kernel/drivers/staging/qcacld-3.0
-          find . -type f \( -name "Kbuild" -o -name "Makefile" -o -name "*.mk" -o -name "*defconfig" \) -exec sed -i 's/CONFIG_FEATURE_MONITOR_MODE_SUPPORT := n/CONFIG_FEATURE_MONITOR_MODE_SUPPORT := y/g' {} +
-
-      - name: Fix GCC Asm Goto Bug
-        run: |
           cd ~/kernel
-          sed -i 's/asm ("");/ /g' include/linux/compiler-gcc.h
-          
+          grep -rn "CONFIG_FEATURE_MONITOR_MODE_SUPPORT" drivers/staging/qcacld-3.0 | head -20
+          find drivers/staging/qcacld-3.0 -type f \( -name "Kbuild" -o -name "Makefile" -o -name "*.mk" -o -name "*defconfig" \) \
+            -exec sed -i 's/CONFIG_FEATURE_MONITOR_MODE_SUPPORT[[:space:]]*:=[[:space:]]*n/CONFIG_FEATURE_MONITOR_MODE_SUPPORT := y/g' {} +
+          echo "--- after patch ---"
+          grep -rn "CONFIG_FEATURE_MONITOR_MODE_SUPPORT" drivers/staging/qcacld-3.0 | head -20
+
       - name: Download Proton Clang
         run: git clone https://github.com/kdrag0n/proton-clang.git --depth=1 ~/proton-clang
+
+      - name: Verify toolchain
+        run: |
+          export PATH="$HOME/proton-clang/bin:$PATH"
+          which clang ld.lld
+          clang --version | head -1
 
       - name: Compile the Kernel
         run: |
           cd ~/kernel
-          export ARCH=arm64
-          export SUBARCH=arm64
           export PATH="$HOME/proton-clang/bin:$PATH"
-          export CC=clang
-          export CROSS_COMPILE=aarch64-linux-gnu-
-          export CROSS_COMPILE_ARM32=arm-linux-gnueabi-
-          export AR=llvm-ar
-          export NM=llvm-nm
-          export OBJCOPY=llvm-objcopy
-          export OBJDUMP=llvm-objdump
-          export STRIP=llvm-strip
-          
-          make O=out vendor/holi-qgki_defconfig
-          make O=out -j$(nproc) CC=clang KCFLAGS="-w -Wno-error=format -Wno-error=implicit-fallthrough" KBUILD_CFLAGS="-w"
+
+          MAKE_ARGS="ARCH=arm64 O=out LLVM=1 LLVM_IAS=1 \
+            CC=clang LD=ld.lld AR=llvm-ar NM=llvm-nm OBJCOPY=llvm-objcopy \
+            OBJDUMP=llvm-objdump STRIP=llvm-strip \
+            CROSS_COMPILE=aarch64-linux-gnu- CROSS_COMPILE_ARM32=arm-linux-gnueabi- \
+            CLANG_TRIPLE=aarch64-linux-gnu-"
+
+          make $MAKE_ARGS vendor/holi-qgki_defconfig
+          # Use KCFLAGS only. It appends, it does not replace -O2 etc.
+          make $MAKE_ARGS -j$(nproc) \
+            KCFLAGS="-Wno-error -Wno-error=format -Wno-error=implicit-fallthrough" \
+            2>&1 | tee build.log
+
+      - name: Upload Image
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-out
+          path: |
+            ~/kernel/out/arch/arm64/boot/Image*
+            ~/kernel/build.log
