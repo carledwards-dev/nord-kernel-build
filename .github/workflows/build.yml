@@ -36,6 +36,24 @@ jobs:
           p.write_text(text.replace(old, new))
           PY
 
+      - name: Fix nu1619 condition
+        run: |
+          cd ~/kernel
+          python - <<'PY'
+          from pathlib import Path
+
+          p = Path("drivers/power/oplus/v1/wireless_ic/oplus_nu1619.c")
+          text = p.read_text()
+
+          old = "if (nu1619_get_CEP_flag(chip) == 0 && adjust_current_delay == 0)"
+          new = "if ((nu1619_get_CEP_flag(chip) == 0) && (adjust_current_delay == 0))"
+
+          if old not in text:
+              raise SystemExit("pattern not found in oplus_nu1619.c")
+
+          p.write_text(text.replace(old, new, 1))
+          PY
+    
       - name: Compile the Kernel
         run: |
           cd ~/kernel
