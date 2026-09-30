@@ -37,10 +37,7 @@ jobs:
           export OBJDUMP=llvm-objdump
           export STRIP=llvm-strip
           
-          echo "Available vendor configs:"
-          ls arch/arm64/configs/vendor/
-          
-          make O=out vendor/holi_defconfig
+          make O=out vendor/holi-qgki_defconfig
           make O=out -j$(nproc)
 
       - name: Upload Finished Kernel
