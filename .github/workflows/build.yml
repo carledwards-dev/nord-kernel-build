@@ -38,10 +38,4 @@ jobs:
           export STRIP=llvm-strip
           
           make O=out vendor/holi-qgki_defconfig
-          make O=out -j$(nproc) KCFLAGS="-Wno-error"
-
-      - name: Upload Finished Kernel
-        uses: actions/upload-artifact@v4
-        with:
-          name: compiled-kernel
-          path: ~/kernel/out/arch/arm64/boot/Image
+          make O=out -j$(nproc) KCFLAGS="-Wno-error -w" KBUILD_CFLAGS="-w"
